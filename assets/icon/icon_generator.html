@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>災害復旧ボランティアログアプリ - アイコン生成</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            max-width: 800px;
+        }
+        h1 {
+            color: #4CAF50;
+        }
+        .canvas-container {
+            margin: 20px 0;
+            display: flex;
+            gap: 20px;
+            flex-wrap: wrap;
+        }
+        .canvas-wrapper {
+            text-align: center;
+        }
+        canvas {
+            border: 2px solid #ddd;
+            border-radius: 10px;
+        }
+        button {
+            background: #4CAF50;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background: #45a049;
+        }
+        .info {
+            background: #e3f2fd;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 15px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🏠 災害復旧ボランティアログアプリ アイコン生成</h1>
+
+        <div class="info">
+            <strong>このツールについて:</strong><br>
+            災害復旧・復興ボランティア活動ログを記録するアプリのアイコンを生成します。<br>
+            生成後、ダウンロードボタンを押して、assets/iconフォルダに保存してください。
+        </div>
+
+        <div class="canvas-container">
+            <div class="canvas-wrapper">
+                <h3>メインアイコン</h3>
+                <canvas id="mainIcon" width="1024" height="1024"></canvas>
+                <br>
+                <button onclick="downloadIcon('mainIcon', 'app_icon.png')">app_icon.pngをダウンロード</button>
+            </div>
+
+            <div class="canvas-wrapper">
+                <h3>Adaptiveアイコン</h3>
+                <canvas id="adaptiveIcon" width="1024" height="1024"></canvas>
+                <br>
+                <button onclick="downloadIcon('adaptiveIcon', 'app_icon_adaptive.png')">app_icon_adaptive.pngをダウンロード</button>
+            </div>
+        </div>
+
+        <div class="info">
+            <strong>ダウンロード後の手順:</strong><br>
+            1. ダウンロードした2つのファイルを <code>assets/icon/</code> フォルダに配置<br>
+            2. ターミナルで <code>flutter pub get</code> を実行<br>
+            3. <code>dart run flutter_launcher_icons</code> を実行<br>
+            4. アプリを再ビルド
+        </div>
+    </div>
+
+    <script>
+        function drawMainIcon() {
+            const canvas = document.getElementById('mainIcon');
+            const ctx = canvas.getContext('2d');
+
+            // 背景 - グラデーション
+            const gradient = ctx.createLinearGradient(0, 0, 0, 1024);
+            gradient.addColorStop(0, '#4CAF50');
+            gradient.addColorStop(1, '#66BB6A');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, 1024, 1024);
+
+            // 角を丸める
+            ctx.globalCompositeOperation = 'destination-in';
+            ctx.beginPath();
+            ctx.roundRect(0, 0, 1024, 1024, 180);
+            ctx.fill();
+            ctx.globalCompositeOperation = 'source-over';
+
+            // 白い円形背景
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.95)';
+            ctx.beginPath();
+            ctx.arc(512, 512, 380, 0, Math.PI * 2);
+            ctx.fill();
+
+            // 家/建物アイコン（復旧・復興のシンボル）
+            ctx.fillStyle = '#4CAF50';
+
+            // 屋根
+            ctx.beginPath();
+            ctx.moveTo(512, 280);
+            ctx.lineTo(380, 380);
+            ctx.lineTo(644, 380);
+            ctx.closePath();
+            ctx.fill();
+
+            // 建物本体
+            ctx.fillRect(400, 380, 224, 180);
+
+            // ドア
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fillRect(470, 460, 72, 100);
+
+            // 窓（左）
+            ctx.fillRect(415, 410, 50, 50);
+
+            // 窓（右）
+            ctx.fillRect(559, 410, 50, 50);
+
+            // リストアイコン（ログのシンボル）
+            ctx.strokeStyle = '#4CAF50';
+            ctx.lineWidth = 20;
+            ctx.lineCap = 'round';
+
+            // チェックボックス
+            const checkSize = 60;
+            const startY = 600;
+            const lineGap = 70;
+
+            for (let i = 0; i < 3; i++) {
+                const y = startY + i * lineGap;
+                // ボックス
+                ctx.strokeRect(360, y, checkSize, checkSize);
+                // チェックマーク
+                ctx.beginPath();
+                ctx.moveTo(375, y + 30);
+                ctx.lineTo(390, y + 45);
+                ctx.lineTo(430, y + 15);
+                ctx.stroke();
+
+                // ライン
+                ctx.beginPath();
+                ctx.moveTo(450, y + 30);
+                ctx.lineTo(620, y + 30);
+                ctx.stroke();
+            }
+        }
+
+        function drawAdaptiveIcon() {
+            const canvas = document.getElementById('adaptiveIcon');
+            const ctx = canvas.getContext('2d');
+
+            // 透明背景
+            ctx.clearRect(0, 0, 1024, 1024);
+
+            // セーフゾーン円（参考用、実際の画像には含まれない）
+            // ctx.strokeStyle = 'rgba(0, 0, 0, 0.1)';
+            // ctx.lineWidth = 2;
+            // ctx.beginPath();
+            // ctx.arc(512, 512, 432, 0, Math.PI * 2);
+            // ctx.stroke();
+
+            // 家/建物アイコン（復旧・復興のシンボル）- Adaptiveサイズ
+            ctx.fillStyle = '#4CAF50';
+
+            // 屋根
+            ctx.beginPath();
+            ctx.moveTo(512, 320);
+            ctx.lineTo(360, 440);
+            ctx.lineTo(664, 440);
+            ctx.closePath();
+            ctx.fill();
+
+            // 建物本体
+            ctx.fillRect(380, 440, 264, 200);
+
+            // ドア
+            ctx.fillStyle = '#FFFFFF';
+            ctx.fillRect(460, 530, 84, 110);
+
+            // 窓（左）
+            ctx.fillRect(400, 470, 60, 60);
+
+            // 窓（右）
+            ctx.fillRect(564, 470, 60, 60);
+
+            // リストアイコン（ログのシンボル）
+            ctx.fillStyle = '#4CAF50';
+            ctx.strokeStyle = '#4CAF50';
+            ctx.lineWidth = 18;
+            ctx.lineCap = 'round';
+
+            const checkSize = 50;
+            const startY = 640;
+            const lineGap = 70;
+
+            for (let i = 0; i < 3; i++) {
+                const y = startY + i * lineGap;
+                // 塗りつぶしボックス
+                ctx.fillRect(380, y, checkSize, checkSize);
+
+                // ホワイトチェックマーク
+                ctx.strokeStyle = 'white';
+                ctx.lineWidth = 12;
+                ctx.beginPath();
+                ctx.moveTo(392, y + 25);
+                ctx.lineTo(405, y + 38);
+                ctx.lineTo(432, y + 15);
+                ctx.stroke();
+
+                // グリーンライン
+                ctx.strokeStyle = '#4CAF50';
+                ctx.lineWidth = 18;
+                ctx.beginPath();
+                ctx.moveTo(460, y + 25);
+                ctx.lineTo(610, y + 25);
+                ctx.stroke();
+            }
+        }
+
+        function downloadIcon(canvasId, filename) {
+            const canvas = document.getElementById(canvasId);
+            const link = document.createElement('a');
+            link.download = filename;
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }
+
+        // ページ読み込み時にアイコンを描画
+        window.onload = function() {
+            drawMainIcon();
+            drawAdaptiveIcon();
+        };
+    </script>
+</body>
+</html>
