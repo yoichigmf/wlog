@@ -6,14 +6,22 @@
 
 Dart SDK ^3.9.2を使用した「flog」というFlutterアプリケーションです。オフラインでも動作する活動ログ収集アプリケーションで、テキスト、音声、画像、動画を位置情報と共に記録できます。
 
+### ⚠️ 重要: 推奨プラットフォーム
+
+**Googleのloopbackフロー廃止（2024年）により、以前は動作していたWindows版が使用不可になりました。現在以下のプラットフォームのみ完全サポート:**
+- ✅ **Android** - 全機能利用可能（最推奨）
+- ✅ **iOS** - 全機能利用可能
+- ⚠️ **Windows** - ローカルログ記録のみ（Google Sign-In不可）
+- ❌ **Web** - 使用不可（Google Sign-In不可、メディアファイル非対応）
+
 ### 主な特徴
 - **テキストは全種類のログに記入可能**: すべてのログにテキストとメディアの両方を添付できます
 - **デフォルトはテキスト入力**: ボタンで音声録音、画像、動画を追加
 - **音声録音**: その場で録音できるモードがデフォルト
 - **プラットフォーム対応**: モバイルとデスクトップで適切なUIを表示
 - **完全オフライン**: ネットワーク不要で動作
-- **Google Sheets連携**: ログをGoogle Sheetsにアップロード
-- **Google Drive連携**: メディアファイルをGoogle Driveにアップロードし、URLをSheetsに記録
+- **Google Sheets連携**: ログをGoogle Sheetsにアップロード（Android/iOS版のみ）
+- **Google Drive連携**: メディアファイルをGoogle Driveにアップロードし、URLをSheetsに記録（Android/iOS版のみ）
 
 ## 開発コマンド
 
@@ -414,26 +422,40 @@ Google Sheetsに以下の情報を記録：
 - App Storeへの提出時は実際に使用する機能の説明が必要
 
 ### Windows
-- **カメラ非対応**: `image_picker`のカメラ機能は利用不可
-- ファイルピッカーで画像/動画を選択可能
-- その他の機能（録音、位置情報、データベース）は正常動作
-- **推奨実行方法**: `flutter run -d windows`
-- **Google Sign-In対応**:
-  - `google_sign_in_all_platforms: ^1.0.1`パッケージを使用
-  - デスクトップアプリ用のOAuth 2.0クライアントIDが必要
-  - 認証情報はキャッシュされ、画面遷移後も保持される
-  - スコープ: userinfo.email, userinfo.profile, drive, spreadsheets
+- **⚠️ Google Sign-In不可 - Googleのloopbackフロー廃止により使用不可**
+- **影響**:
+  - Google Sign-Inが完全に使用不可（エラー 400発生）
+  - Spreadsheetへのアップロード機能が使用不可
+  - ローカルでのログ記録のみ可能
+- **その他の機能**:
+  - カメラ非対応（`image_picker`の制限）
+  - ファイルピッカーで画像/動画を選択可能
+  - 録音、位置情報、データベースは正常動作
+- **原因**:
+  - `google_sign_in_all_platforms`パッケージがloopbackフローを使用
+  - Googleが2024年にloopbackフローを廃止
+  - 現在Flutter Windows版で標準的なGoogle Sign-In実装方法がない
+- **対応方法**: **Android版またはiOS版を使用してください**
+- **詳細**: `WEB_LIMITATIONS.md` を参照
 
 ### Web
-- **制限付き対応**: ネイティブ機能（カメラ、録音、ファイルアクセス）に制限あり
-- **Google Sign-In対応**:
-  - ウェブアプリケーション用のOAuth 2.0クライアントIDが必要
+- **⚠️ 実験的サポートのみ - 本番利用は推奨しません**
+- **重大な制限事項**:
+  - **Google Sign-Inのloopbackフロー廃止**: エラー 400が発生
+  - メディアファイル（画像、音声、動画）の保存・読み込みに制限
+  - ネイティブ機能（カメラ、録音）に制限
+  - HTTPSが必要（localhost除く）
+- **Google Sign-In対応**（複雑で推奨しない）:
+  - ウェブアプリケーション用のOAuth 2.0クライアントIDが必要（デスクトップ用とは別）
   - 承認済みのJavaScript生成元とリダイレクトURIの設定が必要
-  - **People API有効化が必須**: Google Cloud ConsoleでPeople APIを有効にする必要あり
+  - People API有効化が必須
+  - loopbackフロー廃止により設定が複雑
 - **Drift Web対応**:
   - WebAssembly版SQLiteを使用
   - `DriftWebOptions`で`sqlite3.wasm`と`drift_worker.js`を指定
-- **推奨**: モバイルまたはデスクトップでの実行を推奨（機能制限のため）
+  - 開発サーバーではWASMエラーが発生する場合あり
+- **強く推奨**: **Windows版またはAndroid版を使用してください**
+- **詳細**: `WEB_LIMITATIONS.md` を参照
 
 ## トラブルシューティング
 
