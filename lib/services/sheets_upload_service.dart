@@ -27,6 +27,8 @@ class SheetsUploadService {
       }
 
       // Spreadsheetのメタデータを取得
+      print('Spreadsheet取得中: $spreadsheetId');
+      print('認証ユーザー: ${GoogleAuthService.currentUser?.email}');
       final spreadsheet = await sheetsApi.spreadsheets.get(spreadsheetId);
 
       // 優先シート名が存在するか確認
@@ -59,7 +61,16 @@ class SheetsUploadService {
       return preferredSheetName;
     } catch (e) {
       print('シート名決定エラー: $e');
-      return preferredSheetName;
+      if (e.toString().contains('404')) {
+        throw Exception(
+          'Spreadsheetにアクセスできません。\n'
+          '以下を確認してください:\n'
+          '1. Spreadsheet ID: $spreadsheetId が正しいか\n'
+          '2. ${GoogleAuthService.currentUser?.email ?? "認証ユーザー"} に共有されているか\n'
+          '3. 編集権限があるか'
+        );
+      }
+      rethrow;
     }
   }
 
@@ -68,12 +79,14 @@ class SheetsUploadService {
   /// [spreadsheetId]: アップロード先のSpreadsheet ID
   /// [logs]: アップロードするログのリスト
   /// [sheetName]: シート名（デフォルトは「ActivityLogs」）
+  /// [contentFolderId]: コンテンツファイルアップロード用のGoogle DriveフォルダID（任意）
   ///
   /// 戻り値: アップロードに成功したログの数
   static Future<int> uploadLogs({
     required String spreadsheetId,
     required List<ActivityLog> logs,
     String sheetName = 'ActivityLogs',
+    String? contentFolderId,
   }) async {
     if (logs.isEmpty) {
       return 0;
@@ -128,31 +141,69 @@ class SheetsUploadService {
         rows.add(headers); // ヘッダー行を追加（1行目が空の場合のみ）
       }
 
+      // Drive APIアクセス可否フラグ（初回のみチェック）
+      bool driveApiAccessible = true;
+      String? driveApiError;
+
+      // コンテンツフォルダIDが指定されている場合、フォルダアクセスを事前確認
+      if (contentFolderId != null && driveApiAccessible) {
+        try {
+          final folderExists = await DriveUploadService.checkFolderExists(contentFolderId);
+          if (!folderExists) {
+            driveApiAccessible = false;
+            driveApiError = 'コンテンツフォルダにアクセスできません（ID: $contentFolderId）\n\n'
+                '以下を確認してください：\n'
+                '1. フォルダIDが正しいか\n'
+                '2. このGoogleアカウント（yoichi.kayama@gmail.com等）がフォルダにアクセスできるか\n'
+                '3. フォルダが削除されていないか\n\n'
+                '※ テキストデータのみアップロードを続行します';
+            print('警告: コンテンツフォルダアクセスエラー');
+            print(driveApiError);
+          } else {
+            print('コンテンツフォルダへのアクセス確認成功: $contentFolderId');
+          }
+        } catch (e) {
+          driveApiAccessible = false;
+          driveApiError = 'コンテンツフォルダアクセスエラー: $e';
+          print(driveApiError);
+        }
+      }
+
       for (final log in logs) {
         // ファイルがある場合はGoogle Driveにアップロード
         String fileUrl = '';
-        if (log.fileName != null && log.fileName!.isNotEmpty) {
+        if (log.fileName != null && log.fileName!.isNotEmpty && driveApiAccessible) {
           try {
             final file = await FileService.getFile(log.fileName!);
             if (file != null && await file.exists()) {
-              final uploadedUrl =
-                  await DriveUploadService.uploadFileToSpreadsheetFolder(
-                file: file,
-                fileName: log.fileName!,
-                spreadsheetId: spreadsheetId,
-              );
+              // contentFolderIdが指定されている場合はそのフォルダに直接アップロード
+              // 指定されていない場合はSpreadsheetの親フォルダ内のfilesサブフォルダにアップロード
+              final uploadedUrl = contentFolderId != null
+                  ? await DriveUploadService.uploadFile(
+                      file: file,
+                      fileName: log.fileName!,
+                      folderId: contentFolderId,
+                    )
+                  : await DriveUploadService.uploadFileToSpreadsheetFolder(
+                      file: file,
+                      fileName: log.fileName!,
+                      spreadsheetId: spreadsheetId,
+                    );
               fileUrl = uploadedUrl ?? '';
             }
           } catch (e) {
             print('ファイルアップロードエラー (${log.fileName}): $e');
-            // 重大なエラーの場合は処理を中断
+            // Drive API関連のエラーの場合は、以降のファイルアップロードをスキップ
             if (e.toString().contains('Drive API has not been used') ||
                 e.toString().contains('Drive APIが有効になっていません') ||
                 e.toString().contains('File not found') ||
-                e.toString().contains('Spreadsheetが見つかりません')) {
-              rethrow; // エラーを上位に伝播して処理を中断
+                e.toString().contains('Drive APIでSpreadsheetにアクセスできません')) {
+              driveApiAccessible = false;
+              driveApiError = e.toString();
+              print('Drive APIにアクセスできないため、以降のファイルアップロードをスキップします');
+              print('テキストデータのみアップロードを続行します');
             }
-            // その他のエラーは続行（個別ファイルのみスキップ）
+            // ファイルURLは空文字のまま続行（テキストデータはアップロード）
           }
         }
 
@@ -182,6 +233,25 @@ class SheetsUploadService {
         '$actualSheetName!A1', // シート名と開始セル
         valueInputOption: 'USER_ENTERED',
       );
+
+      // Drive APIエラーがあった場合は警告を出力
+      if (!driveApiAccessible && driveApiError != null) {
+        print('');
+        print('='.padRight(60, '='));
+        print('警告: メディアファイルのアップロードに失敗しました');
+        print('='.padRight(60, '='));
+        print('テキストデータは正常にアップロードされました。');
+        print('メディアファイル（画像/音声/動画）はアップロードされていません。');
+        print('');
+        print('原因:');
+        print(driveApiError);
+        print('');
+        print('対処法:');
+        print('1. スプレッドシートを個人のGoogleドライブにコピーして使用');
+        print('2. 組織管理者にDrive APIへのアクセス許可を依頼');
+        print('3. テキストデータのみの運用に切り替え');
+        print('='.padRight(60, '='));
+      }
 
       return logs.length;
     } catch (e) {
@@ -417,6 +487,7 @@ class SheetsUploadService {
   static Future<int> uploadUnuploadedLogs({
     required AppDatabase database,
     required String spreadsheetId,
+    String? contentFolderId,
     Future<bool> Function(List<ActivityLog> duplicates)? onDuplicateFound,
   }) async {
     try {
@@ -487,6 +558,7 @@ class SheetsUploadService {
       final count = await uploadLogs(
         spreadsheetId: spreadsheetId,
         logs: logs,
+        contentFolderId: contentFolderId,
       );
 
       // アップロード成功したログにマークを付ける
@@ -550,10 +622,10 @@ class SheetsUploadService {
         throw Exception('Google認証が必要です');
       }
 
-      // A列～C列のデータを取得（ID、名前、備考）
+      // A列～D列のデータを取得（ID、名前、備考、コンテンツフォルダ）
       final response = await sheetsApi.spreadsheets.values.get(
         masterSpreadsheetId,
-        '$sheetName!A:C',
+        '$sheetName!A:D',
       );
 
       final values = response.values;
@@ -571,6 +643,9 @@ class SheetsUploadService {
         final id = row.isNotEmpty && row[0] != null ? row[0].toString() : '';
         final name = row.length > 1 && row[1] != null ? row[1].toString() : '';
         final note = row.length > 2 && row[2] != null ? row[2].toString() : '';
+        final contentFolderId = row.length > 3 && row[3] != null && row[3].toString().trim().isNotEmpty
+            ? row[3].toString().trim()
+            : null;
 
         // IDが空でない行のみ追加
         if (id.isNotEmpty) {
@@ -578,6 +653,7 @@ class SheetsUploadService {
             id: id,
             name: name,
             note: note,
+            contentFolderId: contentFolderId,
           ));
         }
       }
@@ -595,10 +671,12 @@ class SpreadsheetConfig {
   final String id;
   final String name;
   final String note;
+  final String? contentFolderId; // コンテンツファイルアップロード用フォルダID
 
   SpreadsheetConfig({
     required this.id,
     required this.name,
     required this.note,
+    this.contentFolderId,
   });
 }

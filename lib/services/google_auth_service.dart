@@ -29,8 +29,10 @@ class GoogleAuthService {
   static final String _webClientId = dotenv.env['GOOGLE_WEB_CLIENT_ID'] ?? '';
 
   // Google Sign-Inのインスタンス（標準パッケージ: Android/iOS/macOS/Web）
+  // Android版: clientIdはnullにして、Google Cloud ConsoleでSHA-1ベースのOAuth設定を使用
+  // Web版: _webClientIdを使用
   static final standard.GoogleSignIn _standardGoogleSignIn = standard.GoogleSignIn(
-    clientId: _webClientId,
+    clientId: kIsWeb ? _webClientId : null,
     scopes: [
       sheets.SheetsApi.spreadsheetsScope,
       drive.DriveApi.driveScope,

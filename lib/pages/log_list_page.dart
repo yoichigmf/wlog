@@ -244,9 +244,10 @@ class _LogListPageState extends State<LogListPage> {
   // アップロード処理
   Future<void> _uploadLogs() async {
     try {
-      // Spreadsheet IDを取得
+      // Spreadsheet IDとコンテンツフォルダIDを取得
       final prefs = await SharedPreferences.getInstance();
       final spreadsheetId = prefs.getString('spreadsheet_id');
+      final contentFolderId = prefs.getString('content_folder_id');
 
       if (spreadsheetId == null || spreadsheetId.isEmpty) {
         if (mounted) {
@@ -296,6 +297,7 @@ class _LogListPageState extends State<LogListPage> {
       final count = await SheetsUploadService.uploadUnuploadedLogs(
         database: widget.database,
         spreadsheetId: spreadsheetId,
+        contentFolderId: contentFolderId,
         onDuplicateFound: (duplicates) async {
           // ローディング閉じる（ダイアログ表示のため）
           if (mounted) {

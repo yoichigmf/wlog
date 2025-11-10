@@ -19,7 +19,7 @@ class _SpreadsheetConfigSelectorPageState
 
   // マスタースプレッドシートID
   static const String _masterSpreadsheetId =
-      '11afiITpWlcf7wCUdJTjiG_CR607ckWqxaP44bYGdGJk';
+      '1m52FpNl4x4a3TlbjcBIZEuPUpEGf8SnqG3Dn04fLSco';
 
   @override
   void initState() {
@@ -67,12 +67,17 @@ class _SpreadsheetConfigSelectorPageState
       );
       return;
     }
-    Navigator.of(context).pop(id);
+    // 手動入力の場合はコンテンツフォルダIDなしの設定を返す
+    Navigator.of(context).pop(SpreadsheetConfig(
+      id: id,
+      name: '手動入力',
+      note: '',
+    ));
   }
 
-  /// 選択された設定のIDを返す
-  void _returnSelectedId(String id) {
-    Navigator.of(context).pop(id);
+  /// 選択された設定を返す
+  void _returnSelectedConfig(SpreadsheetConfig config) {
+    Navigator.of(context).pop(config);
   }
 
   @override
@@ -230,10 +235,30 @@ class _SpreadsheetConfigSelectorPageState
                     ),
                   ),
                 },
+                if (config.contentFolderId != null && config.contentFolderId!.isNotEmpty) ...{
+                  const SizedBox(height: 4),
+                  Row(
+                    children: [
+                      const Icon(Icons.folder, size: 14, color: Colors.blue),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: Text(
+                          'コンテンツフォルダ: ${config.contentFolderId}',
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: Colors.blue,
+                            fontFamily: 'monospace',
+                          ),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
+                    ],
+                  ),
+                },
               ],
             ),
             trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-            onTap: () => _returnSelectedId(config.id),
+            onTap: () => _returnSelectedConfig(config),
           ),
         );
       },

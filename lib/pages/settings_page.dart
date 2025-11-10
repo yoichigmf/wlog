@@ -22,6 +22,8 @@ class SettingsPage extends StatefulWidget {
 class _SettingsPageState extends State<SettingsPage> {
   final TextEditingController _spreadsheetIdController =
       TextEditingController();
+  final TextEditingController _contentFolderIdController =
+      TextEditingController();
   bool _isSignedIn = false;
   String? _userEmail;
   String? _spreadsheetTitle;
@@ -29,6 +31,7 @@ class _SettingsPageState extends State<SettingsPage> {
   bool _autoUploadEnabled = false;
 
   static const String _spreadsheetIdKey = 'spreadsheet_id';
+  static const String _contentFolderIdKey = 'content_folder_id';
   static const String _autoUploadKey = 'auto_upload_enabled';
 
   @override
@@ -41,6 +44,7 @@ class _SettingsPageState extends State<SettingsPage> {
   @override
   void dispose() {
     _spreadsheetIdController.dispose();
+    _contentFolderIdController.dispose();
     super.dispose();
   }
 
@@ -48,9 +52,13 @@ class _SettingsPageState extends State<SettingsPage> {
   Future<void> _loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
     final spreadsheetId = prefs.getString(_spreadsheetIdKey);
+    final contentFolderId = prefs.getString(_contentFolderIdKey);
     if (spreadsheetId != null) {
       _spreadsheetIdController.text = spreadsheetId;
       _loadSpreadsheetTitle(spreadsheetId);
+    }
+    if (contentFolderId != null) {
+      _contentFolderIdController.text = contentFolderId;
     }
     setState(() {
       _autoUploadEnabled = prefs.getBool(_autoUploadKey) ?? false;
@@ -87,9 +95,10 @@ class _SettingsPageState extends State<SettingsPage> {
     }
   }
 
-  /// Spreadsheet IDを保存
+  /// Spreadsheet IDとコンテンツフォルダIDを保存
   Future<void> _saveSettings() async {
     final spreadsheetId = _spreadsheetIdController.text.trim();
+    final contentFolderId = _contentFolderIdController.text.trim();
 
     if (spreadsheetId.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -121,6 +130,13 @@ class _SettingsPageState extends State<SettingsPage> {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setString(_spreadsheetIdKey, spreadsheetId);
       await prefs.setBool(_autoUploadKey, _autoUploadEnabled);
+
+      // コンテンツフォルダIDを保存（空の場合は削除）
+      if (contentFolderId.isNotEmpty) {
+        await prefs.setString(_contentFolderIdKey, contentFolderId);
+      } else {
+        await prefs.remove(_contentFolderIdKey);
+      }
 
       // タイトルを読み込む
       await _loadSpreadsheetTitle(spreadsheetId);
@@ -220,15 +236,25 @@ class _SettingsPageState extends State<SettingsPage> {
 
   /// スプレッドシート設定選択画面を開く
   Future<void> _openConfigSelector() async {
-    final selectedId = await Navigator.of(context).push<String>(
+    final selectedConfig = await Navigator.of(context).push<SpreadsheetConfig>(
       MaterialPageRoute(
         builder: (context) => const SpreadsheetConfigSelectorPage(),
       ),
     );
 
-    if (selectedId != null && selectedId.isNotEmpty) {
-      _spreadsheetIdController.text = selectedId;
-      await _loadSpreadsheetTitle(selectedId);
+    if (selectedConfig != null && selectedConfig.id.isNotEmpty) {
+      // Spreadsheet IDを入力欄に設定
+      _spreadsheetIdController.text = selectedConfig.id;
+      await _loadSpreadsheetTitle(selectedConfig.id);
+
+      // コンテンツフォルダIDを入力欄に設定
+      if (selectedConfig.contentFolderId != null && selectedConfig.contentFolderId!.isNotEmpty) {
+        _contentFolderIdController.text = selectedConfig.contentFolderId!;
+      } else {
+        _contentFolderIdController.clear();
+      }
+
+      // SharedPreferencesには保存しない（保存ボタンを押したときに保存）
     }
   }
 
@@ -320,6 +346,21 @@ class _SettingsPageState extends State<SettingsPage> {
                             helperText:
                                 'SpreadsheetのURLから「/d/」と「/edit」の間の文字列\n'
                                 '例: https://docs.google.com/spreadsheets/d/【ここ】/edit',
+                            helperMaxLines: 3,
+                            border: OutlineInputBorder(),
+                          ),
+                          maxLines: 2,
+                        ),
+                        const SizedBox(height: 16),
+                        TextField(
+                          controller: _contentFolderIdController,
+                          decoration: const InputDecoration(
+                            labelText: 'コンテンツフォルダID（任意）',
+                            hintText:
+                                '1u9KIeryxLcRZjirimFYF8BRBnUFIjZW9',
+                            helperText:
+                                'メディアファイルのアップロード先Google DriveフォルダID\n'
+                                '空欄の場合はSpreadsheetの親フォルダ内のfilesフォルダにアップロード',
                             helperMaxLines: 3,
                             border: OutlineInputBorder(),
                           ),
