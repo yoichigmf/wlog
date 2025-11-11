@@ -47,6 +47,7 @@ dependencies:
   # Media and file picking
   image_picker: ^1.1.2
   file_picker: ^8.1.6
+  camera: ^0.11.0+2  # モバイル専用（Windows非対応）
 
   # Permissions
   permission_handler: ^11.3.1

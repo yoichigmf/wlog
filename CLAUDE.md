@@ -105,6 +105,7 @@ lib/
 │   ├── file_service.dart           # メディアファイル管理サービス
 │   ├── location_service.dart       # 位置情報取得サービス
 │   ├── audio_recorder_service.dart # 音声録音サービス
+│   ├── camera_service.dart         # カメラ撮影サービス（写真/動画）
 │   ├── google_auth_service.dart    # Google OAuth認証サービス
 │   ├── sheets_upload_service.dart  # Google Sheetsアップロードサービス
 │   └── drive_upload_service.dart   # Google Driveファイルアップロードサービス
@@ -112,6 +113,7 @@ lib/
     ├── log_list_page.dart    # ログ一覧画面
     ├── add_log_page.dart     # ログ追加画面
     ├── log_detail_page.dart  # ログ詳細画面
+    ├── camera_page.dart      # カメラ撮影画面（写真/動画）
     └── settings_page.dart    # 設定画面（Google認証、Spreadsheet ID設定）
 ```
 
@@ -145,8 +147,8 @@ lib/
      - リアルタイム録音時間表示
      - 録音の終了（破棄）と完了（保存）ボタン
    - **画像/動画**:
-     - **モバイル（Android/iOS）**: カメラ撮影またはギャラリー選択
-     - **デスクトップ（Windows）**: ファイルピッカーのみ（カメラ非対応）
+     - **モバイル（Android/iOS）**: `image_picker`でカメラ撮影またはギャラリー選択
+     - **デスクトップ（Windows）**: ファイルピッカーで選択のみ（カメラ非対応）
    - **ファイル管理**: UUID（v4）ベースのユニークファイル名で保存
 
 2. **位置情報**
@@ -161,7 +163,10 @@ lib/
 
 4. **プラットフォーム対応**
    - **モバイル（Android/iOS）**: カメラ機能を含む全機能利用可能
-   - **デスクトップ（Windows）**: カメラ以外の全機能利用可能
+   - **デスクトップ（Windows）**:
+     - ローカルログ記録: 全機能利用可能
+     - カメラサポート: 非対応（ファイルピッカーで画像/動画選択可能）
+     - Google Sign-In: 利用不可（Googleのポリシー変更により）
    - **Web**: ネイティブ機能制限のため非推奨（録音、カメラ、位置情報に制限あり）
    - プラットフォーム検出により適切なUIを表示
 
@@ -254,8 +259,9 @@ dart run build_runner build --delete-conflicting-outputs
 - `drift: ^2.22.0`: SQLiteデータベースORM
 - `drift_flutter: ^0.2.0`: Flutter用のDriftサポート（Web対応含む）
 - `geolocator: ^13.0.2`: 位置情報取得
-- `image_picker: ^1.1.2`: 画像/動画の選択・撮影
-- `file_picker: ^8.1.6`: ファイル選択
+- `image_picker: ^1.1.2`: 画像/動画の選択・撮影（モバイル向け）
+- `camera: ^0.11.0+2`: カメラ直接制御（Android/iOS専用、Windows非対応）
+- `file_picker: ^8.1.6`: ファイル選択（デスクトップ向け）
 - `permission_handler: ^11.3.1`: パーミッション管理
 - `record: ^6.1.2`: 音声録音（**v5からv6にアップグレード**: `record_linux`互換性修正）
 - `uuid: ^4.5.1`: ユニークID生成（ファイル名用）
@@ -304,14 +310,33 @@ TextField(
 ```
 Bad state: This implementation of ImagePickedPlatform requires a 'CameraDelegate'
 ```
-**解決**: プラットフォーム検出を実装
+**試行**: `camera`パッケージと`camera_windows`パッケージでWindows向けカメラ対応を試みたが、以下の問題が発生：
+- `camera`パッケージ単体: Windows実装なし（`MissingPluginException`）
+- `camera_windows`追加: ビデオプレビュー初期化エラー（`CameraException: Failed to initialize video preview`）
+
+**結論**: `camera_windows`パッケージは開発途上で不安定なため、Windows版ではカメラ機能を無効化
+
+**解決**: プラットフォーム検出を実装してモバイルのみカメラを有効化
 ```dart
-bool get _isMobilePlatform {
-  if (kIsWeb) return false;
-  return Platform.isAndroid || Platform.isIOS;
+Future<void> _checkCameraAvailability() async {
+  // Windows版ではカメラ機能を無効化
+  if (kIsWeb || (!Platform.isAndroid && !Platform.isIOS)) {
+    setState(() => _cameraAvailable = false);
+    return;
+  }
+  // モバイルのみカメラチェック実行
+  final available = await CameraService.isCameraAvailable();
+  setState(() => _cameraAvailable = available);
 }
 ```
-モバイルではカメラボタンを表示、デスクトップではファイルピッカーのみ表示
+
+**実装されたファイル**（モバイル専用）:
+- `CameraService` (`lib/services/camera_service.dart`) - Android/iOS専用
+- `CameraPage` (`lib/pages/camera_page.dart`) - Android/iOS専用
+
+**UI動作**:
+- **Android/iOS**: カメラ撮影とギャラリー選択の両方を表示
+- **Windows**: ファイルピッカーのみ表示
 
 ### 4. 録音UIの改善
 **要件**: 録音中にキャンセルまたは保存を選択できるようにする

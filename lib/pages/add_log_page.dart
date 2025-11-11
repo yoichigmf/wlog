@@ -11,6 +11,8 @@ import '../services/file_service.dart';
 import '../services/location_service.dart';
 import '../services/audio_recorder_service.dart';
 import '../services/sheets_upload_service.dart';
+import '../services/camera_service.dart';
+import 'camera_page.dart';
 
 class AddLogPage extends StatefulWidget {
   final AppDatabase database;
@@ -32,6 +34,7 @@ class _AddLogPageState extends State<AddLogPage> {
   bool _isRecording = false;
   Timer? _recordingTimer;
   Duration _recordingDuration = Duration.zero;
+  bool _cameraAvailable = false;
 
   // モバイルプラットフォームかどうかを判定
   bool get _isMobilePlatform {
@@ -43,6 +46,32 @@ class _AddLogPageState extends State<AddLogPage> {
   void initState() {
     super.initState();
     _getLocation();
+    _checkCameraAvailability();
+  }
+
+  /// カメラが利用可能かチェック
+  Future<void> _checkCameraAvailability() async {
+    // Windows版では camera_windows パッケージが不安定なため、カメラ機能を無効化
+    // モバイル版のみカメラを有効にする
+    if (kIsWeb || (!Platform.isAndroid && !Platform.isIOS)) {
+      setState(() {
+        _cameraAvailable = false;
+      });
+      print('デスクトップ/Web版ではカメラ機能を無効化しています');
+      return;
+    }
+
+    final available = await CameraService.isCameraAvailable();
+    if (mounted) {
+      setState(() {
+        _cameraAvailable = available;
+      });
+      if (available) {
+        print('カメラが利用可能です');
+      } else {
+        print('カメラが利用できません');
+      }
+    }
   }
 
   @override
@@ -219,6 +248,52 @@ class _AddLogPageState extends State<AddLogPage> {
       if (video != null) {
         setState(() {
           _selectedFile = File(video.path);
+          _mediaType = MediaType.video;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('カメラエラー: $e')));
+      }
+    }
+  }
+
+  // カメラページで写真を撮影
+  Future<void> _openCameraForPhoto() async {
+    try {
+      final File? file = await Navigator.of(context).push<File>(
+        MaterialPageRoute(
+          builder: (context) => const CameraPage(isVideo: false),
+        ),
+      );
+      if (file != null) {
+        setState(() {
+          _selectedFile = file;
+          _mediaType = MediaType.image;
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('カメラエラー: $e')));
+      }
+    }
+  }
+
+  // カメラページで動画を録画
+  Future<void> _openCameraForVideo() async {
+    try {
+      final File? file = await Navigator.of(context).push<File>(
+        MaterialPageRoute(
+          builder: (context) => const CameraPage(isVideo: true),
+        ),
+      );
+      if (file != null) {
+        setState(() {
+          _selectedFile = file;
           _mediaType = MediaType.video;
         });
       }
@@ -450,7 +525,59 @@ class _AddLogPageState extends State<AddLogPage> {
                           ),
                         ],
                       )
+                    else if (_cameraAvailable)
+                      // デスクトップでカメラが利用可能な場合
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Card(
+                              child: InkWell(
+                                onTap: _openCameraForPhoto,
+                                child: const Padding(
+                                  padding: EdgeInsets.all(16),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        Icons.camera_alt,
+                                        size: 32,
+                                        color: Colors.green,
+                                      ),
+                                      SizedBox(width: 8),
+                                      Text('カメラで撮影', style: TextStyle(fontSize: 16)),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Card(
+                              child: InkWell(
+                                onTap: _pickImage,
+                                child: const Padding(
+                                  padding: EdgeInsets.all(16),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        Icons.photo_library,
+                                        size: 32,
+                                        color: Colors.green,
+                                      ),
+                                      SizedBox(width: 8),
+                                      Text('画像を選択', style: TextStyle(fontSize: 16)),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      )
                     else
+                      // デスクトップでカメラが利用できない場合
                       Card(
                         child: InkWell(
                           onTap: _pickImage,
@@ -522,7 +649,59 @@ class _AddLogPageState extends State<AddLogPage> {
                           ),
                         ],
                       )
+                    else if (_cameraAvailable)
+                      // デスクトップでカメラが利用可能な場合
+                      Row(
+                        children: [
+                          Expanded(
+                            child: Card(
+                              child: InkWell(
+                                onTap: _openCameraForVideo,
+                                child: const Padding(
+                                  padding: EdgeInsets.all(16),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        Icons.videocam,
+                                        size: 32,
+                                        color: Colors.purple,
+                                      ),
+                                      SizedBox(width: 8),
+                                      Text('カメラで録画', style: TextStyle(fontSize: 16)),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Card(
+                              child: InkWell(
+                                onTap: _pickVideo,
+                                child: const Padding(
+                                  padding: EdgeInsets.all(16),
+                                  child: Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        Icons.video_library,
+                                        size: 32,
+                                        color: Colors.purple,
+                                      ),
+                                      SizedBox(width: 8),
+                                      Text('動画を選択', style: TextStyle(fontSize: 16)),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ),
+                        ],
+                      )
                     else
+                      // デスクトップでカメラが利用できない場合
                       Card(
                         child: InkWell(
                           onTap: _pickVideo,
