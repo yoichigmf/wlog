@@ -65,6 +65,8 @@ flutter run -d <device-id>
 flutter build ios
 ```
 
+**重要**: iOS版でGoogle Sign-Inを使用するには、追加の設定が必要です。詳細は `IOS_GOOGLE_SIGNIN_SETUP.md` を参照してください。
+
 ### Windows版（ローカルログのみ）
 
 ```bash
@@ -118,7 +120,9 @@ GOOGLE_DESKTOP_CLIENT_SECRET=your-desktop-client-secret
 5. Android用/iOS用OAuth 2.0クライアントIDを作成
 6. 必要なスコープを追加
 
-詳細は `GOOGLE_SETUP.md` を参照してください。
+**詳細手順**:
+- **Android版**: `GOOGLE_SETUP.md` を参照
+- **iOS版**: `IOS_GOOGLE_SIGNIN_SETUP.md` を参照（Info.plist設定が必須）
 
 ## 使用方法
 
@@ -170,13 +174,30 @@ The loopback flow has been blocked...
 - パッケージ名が`com.example.flog`になっているか確認
 - OAuth同意画面でテストユーザーを追加
 
+詳細は `GOOGLE_SETUP.md` を参照してください。
+
+### iOS版でサインイン時にクラッシュする
+
+**原因**: `Info.plist`にReversed Client IDが設定されていない、または誤っている
+
+**対応方法**:
+1. `IOS_GOOGLE_SIGNIN_SETUP.md` の手順に従って設定
+2. Google Cloud ConsoleでiOS用クライアントIDを作成
+3. `ios/Runner/Info.plist` の73行目にReversed Client IDを設定
+4. Xcodeでサインイン設定を完了
+
+詳細は `IOS_GOOGLE_SIGNIN_SETUP.md` を参照してください。
+
+### その他のトラブルシューティング
+
 詳細は `GOOGLE_SETUP.md` と `WEB_LIMITATIONS.md` を参照してください。
 
 ## ドキュメント
 
 - `CLAUDE.md` - プロジェクト全体の概要（開発者向け）
 - `WEB_LIMITATIONS.md` - Windows版とWeb版の制限事項
-- `GOOGLE_SETUP.md` - Google Cloud Consoleの設定手順
+- `GOOGLE_SETUP.md` - Android版Google Cloud Console設定手順
+- `IOS_GOOGLE_SIGNIN_SETUP.md` - **iOS版Google Sign-In設定手順（必須）**
 - `ANDROID_GOOGLE_SETUP.md` - Android版Google Sign-In設定
 - `CONTENT_FOLDER_FEATURE.md` - コンテンツフォルダID機能
 - `WORKSPACE_SPREADSHEET_GUIDE.md` - 組織ワークスペース対応

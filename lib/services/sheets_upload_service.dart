@@ -125,14 +125,14 @@ class SheetsUploadService {
       final headers = [
         'UUID',
         '登録日時',
-        'テキスト',
+        'アップロードユーザー',
         'メディアタイプ',
-        'ファイル名',
         'ファイルURL',
+        'サムネイル',
+        'テキスト',
         '緯度',
         '経度',
         'アップロード日時',
-        'アップロードユーザー',
       ];
 
       // データ行を準備
@@ -172,6 +172,7 @@ class SheetsUploadService {
       for (final log in logs) {
         // ファイルがある場合はGoogle Driveにアップロード
         String fileUrl = '';
+
         if (log.fileName != null && log.fileName!.isNotEmpty && driveApiAccessible) {
           try {
             final file = await FileService.getFile(log.fileName!);
@@ -207,17 +208,20 @@ class SheetsUploadService {
           }
         }
 
+        // メディアタイプ: nullの場合は'text'を使用
+        final mediaType = log.mediaType ?? 'text';
+
         rows.add([
           log.uuid ?? '', // UUID（ログの一意識別子）、nullの場合は空文字
           _toJstString(log.createdAt.toUtc()), // 東京タイムゾーンのISO8601文字列
-          log.textContent ?? '',
-          log.mediaType ?? '',
-          log.fileName ?? '',
-          fileUrl, // Google DriveのファイルURL
-          log.latitude?.toString() ?? '',
-          log.longitude?.toString() ?? '',
-          _toJstString(uploadedAt), // アップロード日時（東京タイムゾーンのISO8601文字列）
           userEmail, // アップロードユーザーのメールアドレス
+          mediaType, // メディアタイプ（nullの場合は'text'）
+          fileUrl, // Google DriveのファイルURL
+          '', // サムネイル（スプレッドシート側で設定）
+          log.textContent ?? '', // テキストコンテンツ
+          log.latitude?.toString() ?? '', // 緯度
+          log.longitude?.toString() ?? '', // 経度
+          _toJstString(uploadedAt), // アップロード日時（東京タイムゾーンのISO8601文字列）
         ]);
       }
 

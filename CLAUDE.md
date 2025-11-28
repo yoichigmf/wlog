@@ -386,9 +386,15 @@ Future<void> _checkCameraAvailability() async {
    - 設定の保存・読み込み
 
 4. **`GOOGLE_SETUP.md`**
-   - Google Cloud Consoleの設定手順書
+   - Google Cloud Consoleの設定手順書（Android用）
    - OAuth 2.0クライアントID作成手順
    - トラブルシューティング
+
+5. **`IOS_GOOGLE_SIGNIN_SETUP.md`**
+   - iOS版Google Sign-In設定手順書
+   - Team IDとBundle IDの確認方法
+   - Info.plistのReversed Client ID設定
+   - Xcodeでのサインイン設定
 
 #### 既存ファイルの更新
 - **`lib/pages/log_list_page.dart`**
@@ -411,16 +417,23 @@ Google Sheetsに以下の情報を記録：
 - **アップロードユーザー**: サインインしているGoogleアカウントのメールアドレス
 
 #### Google Cloud Consoleの設定
-**必要な情報**:
+
+**Android版の必要な情報**:
 - パッケージ名: `com.example.flog`
 - SHA-1フィンガープリント: `B9:FB:8F:D6:75:7F:62:45:11:53:FE:B5:DE:8D:A6:84:26:E7:27:EE`（デバッグ用）
+
+**iOS版の必要な情報**:
+- Bundle ID: `com.example.flog`
+- Team ID: Apple Developerから取得（10文字の英数字）
+- Reversed Client ID: Info.plistに設定が必要
 
 **設定手順**:
 1. Google Cloud Consoleでプロジェクト作成
 2. Google Sheets APIを有効化
 3. OAuth同意画面を設定（テストユーザー追加必須）
-4. Android用OAuth 2.0クライアントIDを作成
-5. 必要なスコープを追加: `https://www.googleapis.com/auth/spreadsheets`
+4. **Android用**OAuth 2.0クライアントIDを作成
+5. **iOS用**OAuth 2.0クライアントIDを作成（詳細は`IOS_GOOGLE_SIGNIN_SETUP.md`参照）
+6. 必要なスコープを追加: `https://www.googleapis.com/auth/spreadsheets`
 
 **使用方法**:
 1. アプリの設定画面でGoogleサインイン
@@ -445,6 +458,15 @@ Google Sheetsに以下の情報を記録：
 - **パーミッション**: `Info.plist`で各権限の使用目的を記述必須
 - 全機能が利用可能
 - App Storeへの提出時は実際に使用する機能の説明が必要
+- **Google Sign-In設定が必須**:
+  - Google Cloud ConsoleでiOS用OAuth 2.0クライアントIDを作成
+  - Team IDとBundle IDの登録が必要
+  - `Info.plist`にReversed Client IDの設定が必須
+  - **詳細手順**: `IOS_GOOGLE_SIGNIN_SETUP.md` を参照
+- **トラブルシューティング**:
+  - サインイン時にクラッシュする場合: `Info.plist`のReversed Client IDが未設定または誤っている
+  - "Unknown or unsupported URL": Bundle IDの不一致
+  - "Invalid client": Team IDの誤り
 
 ### Windows
 - **⚠️ Google Sign-In不可 - Googleのloopbackフロー廃止により使用不可**

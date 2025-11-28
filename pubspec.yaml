@@ -67,6 +67,10 @@ dependencies:
   # Audio recording
   record: ^6.1.2
 
+  # Image processing for thumbnails
+  image: ^4.3.0
+  video_thumbnail: ^0.5.3
+
   # Google Sign-In and Sheets API
   google_sign_in: ^6.2.2
   google_sign_in_all_platforms: ^1.0.1
